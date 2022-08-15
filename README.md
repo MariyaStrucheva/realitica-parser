@@ -24,4 +24,4 @@ docker run -v $PWD/data:./data -p 80:80 --rm romanew/realitica:latest
 
 # Details
 The data storage is a local h2 file database by default.
-When the application starts, it goes to load ads from https://realitica.com. Also, ads reload every 6 hours
+When the application starts, it goes to load ads from https://realitica.com. Also, ads reload every 6 hours.
