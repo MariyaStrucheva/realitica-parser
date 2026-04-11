@@ -128,6 +128,10 @@ public class RealiticaContentLoader implements IContentLoader {
             try {
                 var url = urlWithAds + "&cur_page=" + curPage;
                 var pageDoc = jsonpGetWrapper(url, 3);
+                if (pageDoc == null) {
+                    log.error("Failed to load page {} of {}, stopping", curPage + 1, urlWithAds);
+                    break;
+                }
                 var adElements = pageDoc.select("div.thumb_div > a");
                 if (adElements.isEmpty()) {
                     log.info("Last page {} of {}", curPage + 1, urlWithAds);
@@ -145,7 +149,8 @@ public class RealiticaContentLoader implements IContentLoader {
                         .toList();
                 ids.addAll(listIds);
             } catch (Exception e) {
-                log.error("Can't load page with ad, goes to sleep 1s: " + urlWithAds, e);
+                log.error("Can't load page {} of {}, stopping: {}", curPage + 1, urlWithAds, e.getMessage());
+                break;
             }
         }
         return ids;
@@ -284,6 +289,9 @@ public class RealiticaContentLoader implements IContentLoader {
 
 
     private long lastRequestTime = 0;
+    private static final long RATE_LIMIT_MS = 1000;
+    private static final long RATE_LIMIT_JITTER_MS = 1000;
+    private static final long RATE_LIMIT_403_MS = 5 * 60 * 1000; // 5 min after CloudFront block
 
     @SneakyThrows
     private synchronized Document jsonpGetWrapper(String url, int attempts) {
@@ -292,10 +300,10 @@ public class RealiticaContentLoader implements IContentLoader {
             return null;
         }
 
-        // RATE LIMIT
-        long RATE_LIMIT_MS = 250;
+        // RATE LIMIT with jitter to look more human
         long now = System.currentTimeMillis();
-        long wait = lastRequestTime + RATE_LIMIT_MS - now;
+        long jitter = (long) (Math.random() * RATE_LIMIT_JITTER_MS);
+        long wait = lastRequestTime + RATE_LIMIT_MS + jitter - now;
         if (wait > 0) {
             Thread.sleep(wait);
         }
@@ -327,9 +335,19 @@ public class RealiticaContentLoader implements IContentLoader {
             }
 
             return result;
+        } catch (org.jsoup.HttpStatusException e) {
+            if (e.getStatusCode() == 403) {
+                log.warn("CloudFront 403 for {}, sleeping {} min before retry (attempts left: {})",
+                        url, RATE_LIMIT_403_MS / 60000, attempts - 1);
+                Thread.sleep(RATE_LIMIT_403_MS);
+            } else {
+                log.warn("HTTP {} for {}, attempts left {}", e.getStatusCode(), url, attempts - 1);
+                Thread.sleep(5_000);
+            }
+            return jsonpGetWrapper(url, attempts - 1);
         } catch (IOException e) {
             log.warn("Can't load page {}, attempts left {}", url, attempts - 1, e);
-            Thread.sleep(1000);
+            Thread.sleep(3_000);
             return jsonpGetWrapper(url, attempts - 1);
         }
     }
