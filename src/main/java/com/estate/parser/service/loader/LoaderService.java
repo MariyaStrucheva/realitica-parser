@@ -37,7 +37,7 @@ public class LoaderService {
         try {
             log.info("Start scheduler to remove deprecated");
             var deprecatedDate = OffsetDateTime.now().minusMonths(2);
-            var toRemoveDate = LocalDateTime.now().minusMonths(18);
+            var toRemoveDate = LocalDateTime.now().minusMonths(12);
             var deprecatedAdEntities = adRepository.findAll().stream()
                     .filter(s -> s.getUpdated() == null || s.getUpdated().isBefore(deprecatedDate))
                     .filter(s -> {
@@ -48,7 +48,9 @@ public class LoaderService {
                         return resolveLoader(s.getSourceCode()).isCanBeDeleted(s.getSourceId());
                     })
                     .collect(Collectors.toList());
+            log.info("Found entities to remove {}", deprecatedAdEntities.size());
             adRepository.deleteAll(deprecatedAdEntities);
+            log.info("Finish removing");
         } catch (Exception e) {
             log.error("Error removing deprecated ads", e);
         }
