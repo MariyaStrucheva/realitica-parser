@@ -68,7 +68,7 @@ public class EstitorContentLoader implements IContentLoader {
         while (curPage >= 1) {
             try {
                 var url = urlWithAds + (curPage > 1 ? "/page-" + curPage : "");
-                var pageDoc = Jsoup.connect(url).get();
+                var pageDoc = browserConnect(url).get();
                 var adElements = pageDoc.select(".estate-card > div > a");
                 if (adElements.isEmpty() || !url.equals(pageDoc.location())) {
                     log.info("Last page {} of {}", curPage, url);
@@ -97,7 +97,7 @@ public class EstitorContentLoader implements IContentLoader {
 
         try {
             log.info("Loading ad {}", url);
-            var doc = Jsoup.connect(url).get();
+            var doc = browserConnect(url).get();
             var attributesMap = new LinkedHashMap<String, String>();
             //"Published:" -> "23.02.2021"
             value = Objects.requireNonNull(doc.select("span:matchesOwn(^Published$)").first())
@@ -203,6 +203,17 @@ public class EstitorContentLoader implements IContentLoader {
             log.error("Can't save stun {}", id, e);
             return null;
         }
+    }
+
+    private org.jsoup.Connection browserConnect(String url) {
+        return Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Accept-Encoding", "gzip, deflate, br")
+                .header("Cache-Control", "no-cache")
+                .referrer("https://www.google.com")
+                .timeout(30_000);
     }
 
     private AdEntity.Type convertType(String type) {
