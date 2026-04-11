@@ -302,7 +302,15 @@ public class RealiticaContentLoader implements IContentLoader {
         lastRequestTime = System.currentTimeMillis();
 
         try {
-            var result = Jsoup.connect(url).get();
+            var result = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .header("Accept-Encoding", "gzip, deflate, br")
+                    .header("Cache-Control", "no-cache")
+                    .referrer("https://www.google.com")
+                    .timeout(30_000)
+                    .get();
 
             // JS challenge (AWS WAF)
             if (result.text().contains("JavaScript is disabled")) {
