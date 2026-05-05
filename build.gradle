@@ -33,6 +33,7 @@ dependencies {
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
 	implementation 'org.jsoup:jsoup:1.17.2'
+	implementation 'com.microsoft.playwright:playwright:1.44.0'
 
 	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

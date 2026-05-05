@@ -2,11 +2,11 @@ package com.estate.parser.service.loader;
 
 import com.estate.parser.entity.AdEntity;
 import com.estate.parser.repository.AdRepository;
+import com.estate.parser.service.PlaywrightService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +23,7 @@ import static com.estate.parser.entity.AdEntity.Type.*;
 public class EstitorContentLoader implements IContentLoader {
 
     private final AdRepository adRepository;
+    private final PlaywrightService playwrightService;
 
     @Value("${estitor.url:https://estitor.com}")
     private String baseUrl;
@@ -68,7 +69,7 @@ public class EstitorContentLoader implements IContentLoader {
         while (curPage >= 1) {
             try {
                 var url = urlWithAds + (curPage > 1 ? "/page-" + curPage : "");
-                var pageDoc = browserConnect(url).get();
+                var pageDoc = playwrightService.getDocument(url);
                 var adElements = pageDoc.select(".estate-card > div > a");
                 if (adElements.isEmpty() || !url.equals(pageDoc.location())) {
                     log.info("Last page {} of {}", curPage, url);
@@ -97,7 +98,7 @@ public class EstitorContentLoader implements IContentLoader {
 
         try {
             log.info("Loading ad {}", url);
-            var doc = browserConnect(url).get();
+            var doc = playwrightService.getDocument(url);
             var attributesMap = new LinkedHashMap<String, String>();
             //"Published:" -> "23.02.2021"
             value = Objects.requireNonNull(doc.select("span:matchesOwn(^Published$)").first())
@@ -205,17 +206,6 @@ public class EstitorContentLoader implements IContentLoader {
         }
     }
 
-    private org.jsoup.Connection browserConnect(String url) {
-        return Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .header("Accept-Encoding", "gzip, deflate, br")
-                .header("Cache-Control", "no-cache")
-                .referrer("https://www.google.com")
-                .timeout(30_000);
-    }
-
     private AdEntity.Type convertType(String type) {
         if (StringUtils.containsIgnoreCase(type, "Sale")) {
             if (StringUtils.containsIgnoreCase(type, "Office")) {
@@ -245,7 +235,6 @@ public class EstitorContentLoader implements IContentLoader {
             if (StringUtils.containsIgnoreCase(type, "Land")) {
                 return LAND_LONG_TERM_RENTAL;
             }
-
         }
         return OTHER;
     }
