@@ -9,7 +9,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 
-@Service
+//@Service
 @Slf4j
 public class PlaywrightService {
 

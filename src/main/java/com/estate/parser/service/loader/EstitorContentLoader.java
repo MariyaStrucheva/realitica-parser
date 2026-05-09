@@ -17,7 +17,7 @@ import java.util.*;
 
 import static com.estate.parser.entity.AdEntity.Type.*;
 
-@Service
+//@Service
 @Slf4j
 @RequiredArgsConstructor
 public class EstitorContentLoader implements IContentLoader {
