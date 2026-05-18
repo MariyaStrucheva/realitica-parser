@@ -67,8 +67,8 @@ jobs:
         uses: appleboy/scp-action@master
         with:
           host: 31.186.136.15
-          port: 11022
           username: root
+          port: 11022
           key: ${{ secrets.SSH_PRIVATE_KEY_PERSONAL }}
           source: docker-compose-live.yml
           target: ~/estate/
