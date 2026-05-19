@@ -2,14 +2,16 @@ package com.estate.parser.service.loader;
 
 import com.estate.parser.entity.AdEntity;
 import com.estate.parser.repository.AdRepository;
-import com.estate.parser.service.PlaywrightService;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,13 +19,12 @@ import java.util.*;
 
 import static com.estate.parser.entity.AdEntity.Type.*;
 
-//@Service
+@Service
 @Slf4j
 @RequiredArgsConstructor
 public class EstitorContentLoader implements IContentLoader {
 
     private final AdRepository adRepository;
-    private final PlaywrightService playwrightService;
 
     @Value("${estitor.url:https://estitor.com}")
     private String baseUrl;
@@ -31,8 +32,8 @@ public class EstitorContentLoader implements IContentLoader {
     @Override
     public List<String> loadAndSave() {
         var searches = List.of(
-                "https://estitor.com/me-en/real-estates/purpose-rent",
-                "https://estitor.com/me-en/real-estates/purpose-sale"
+                baseUrl + "/me-en/real-estates/purpose-rent",
+                baseUrl + "/me-en/real-estates/purpose-sale"
         );
         return searches.stream()
                 .map(this::loadIdsBySearch)
@@ -54,12 +55,6 @@ public class EstitorContentLoader implements IContentLoader {
         return attributesMap == null || attributesMap.isEmpty();
     }
 
-    /**
-     * Load ids of ad from search
-     *
-     * @param urlWithAds
-     * @return
-     */
     @SneakyThrows
     private HashSet<String> loadIdsBySearch(String urlWithAds) {
         log.info("Start to load by filter: {}", urlWithAds);
@@ -69,7 +64,11 @@ public class EstitorContentLoader implements IContentLoader {
         while (curPage >= 1) {
             try {
                 var url = urlWithAds + (curPage > 1 ? "/page-" + curPage : "");
-                var pageDoc = playwrightService.getDocument(url);
+                var pageDoc = jsoupGet(url, 3);
+                if (pageDoc == null) {
+                    log.error("Failed to load page {} of {}, stopping", curPage, urlWithAds);
+                    break;
+                }
                 var adElements = pageDoc.select(".estate-card > div > a");
                 if (adElements.isEmpty() || !url.equals(pageDoc.location())) {
                     log.info("Last page {} of {}", curPage, url);
@@ -98,7 +97,10 @@ public class EstitorContentLoader implements IContentLoader {
 
         try {
             log.info("Loading ad {}", url);
-            var doc = playwrightService.getDocument(url);
+            var doc = jsoupGet(url, 3);
+            if (doc == null) {
+                return null;
+            }
             var attributesMap = new LinkedHashMap<String, String>();
             //"Published:" -> "23.02.2021"
             value = Objects.requireNonNull(doc.select("span:matchesOwn(^Published$)").first())
@@ -142,12 +144,6 @@ public class EstitorContentLoader implements IContentLoader {
         }
     }
 
-    /**
-     * load and save ad by id to db
-     *
-     * @param url
-     * @param repeats
-     */
     private AdEntity loadAdAndSave(String url, int repeats) {
         var id = url.replaceAll(".*/id-(\\d+)", "$1");
 
@@ -237,5 +233,38 @@ public class EstitorContentLoader implements IContentLoader {
             }
         }
         return OTHER;
+    }
+
+    private long lastRequestTime = 0;
+    private static final long RATE_LIMIT_MS = 1000;
+    private static final long RATE_LIMIT_JITTER_MS = 1000;
+
+    @SneakyThrows
+    private synchronized Document jsoupGet(String url, int attempts) {
+        if (attempts <= 0) {
+            log.error("Exceeded max attempts to load page {}", url);
+            return null;
+        }
+
+        long now = System.currentTimeMillis();
+        long jitter = (long) (Math.random() * RATE_LIMIT_JITTER_MS);
+        long wait = lastRequestTime + RATE_LIMIT_MS + jitter - now;
+        if (wait > 0) {
+            Thread.sleep(wait);
+        }
+        lastRequestTime = System.currentTimeMillis();
+
+        try {
+            return Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .timeout(30_000)
+                    .get();
+        } catch (IOException e) {
+            log.warn("Can't load page {}, attempts left {}", url, attempts - 1, e);
+            Thread.sleep(3_000);
+            return jsoupGet(url, attempts - 1);
+        }
     }
 }
