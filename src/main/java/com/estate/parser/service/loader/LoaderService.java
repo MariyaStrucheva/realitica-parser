@@ -20,7 +20,7 @@ public class LoaderService {
     private final AdRepository adRepository;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
-    @Scheduled(cron = "0 0 19 * * *") // every day at 19:00
+    @Scheduled(cron = "0 0 0 * * *")
     public void load() {
         if (!running.compareAndSet(false, true)) {
             log.warn("Loader is already running, skip");
