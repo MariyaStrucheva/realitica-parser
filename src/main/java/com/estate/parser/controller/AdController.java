@@ -29,11 +29,11 @@ public class AdController {
 
     @RequestMapping(path = "/parse")
     @ResponseBody
-    public ResponseEntity<String> triggerParse() {
+    public String triggerParse() {
         if (loaderService.isRunning()) {
-            return ResponseEntity.status(409).body("Loader is already running");
+            return "Loader is already running";
         }
         new Thread(loaderService::load, "manual-loader").start();
-        return ResponseEntity.accepted().body("Loader started");
+        return "Loader started";
     }
 }

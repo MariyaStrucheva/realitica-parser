@@ -1,133 +1,137 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
-    <title>Parser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Estate parser</title>
 
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" type="text/css"
-          href="https://cdn.datatables.net/searchpanes/1.2.1/css/searchPanes.dataTables.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.3.4/css/select.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/searchpanes/2.2.0/css/searchPanes.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css">
 
-    <style>
-        .loading {
-            position: absolute;
-            top: calc(50% - 16px);
-            left: calc(50% - 16px);
-            width: 32px;
-            height: 32px;
-        }
-    </style>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="https://cdn.datatables.net/searchpanes/1.2.1/js/dataTables.searchPanes.min.js"></script>
-    <script type="text/javascript" charset="utf8"
-            src="https://cdn.datatables.net/select/1.3.4/js/dataTables.select.min.js"></script>
-
-    <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-M0P2NJBFKY"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-
-        function gtag() {
-            dataLayer.push(arguments);
-        }
-
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
         gtag('config', 'G-M0P2NJBFKY');
     </script>
 </head>
 
-<body>
-<img id="loading_id" class="loading" src="/loading.gif"/>
-<table id="table_id" class="display" style="display: none">
-    <thead>
-    <tr>
-        <th>City</th>
-        <th>Area</th>
-        <th>Type</th>
-        <th>Bedrooms</th>
-        <th>Size</th>
-        <th>Price</th>
-        <th>Last modified</th>
-        <th>Source</th>
-        <th>Link</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="s: ${ads}">
-        <td th:text="${s.city}"/>
-        <td th:text="${s.city}  + ${s.location == null ? '' : '/' + s.location}"/>
-        <td th:text="${s.type.desc}"/>
-        <td th:text="${s.bedrooms}"/>
-        <td th:text="${s.size}"/>
-        <td th:text="${s.price}"/>
-        <td th:text="${#strings.replace(s.lastModified, 'T00:00', '')}"/>
-        <td th:text="${s.sourceCode}"/>
-        <td><a th:href="${s.sourceLink}" th:text="${s.sourceId}" target="_blank"></a></td>
-    </tr>
-    </tbody>
-</table>
-<script>
-    $(document).ready(function () {
-        var isTypeSale = window.location.search.includes('type=Sale');
-        var priceFilterMultiplier = isTypeSale ? 100 : 1;
+<body class="bg-body-tertiary small">
+
+<div id="loader" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-body-tertiary" style="z-index:1080">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading…</span></div>
+</div>
+
+<nav class="navbar navbar-expand bg-body border-bottom sticky-top py-1 px-2">
+    <div class="btn-group btn-group-sm me-2" role="group">
+        <a id="link_rental" class="btn btn-outline-secondary active" href="/?type=Rental">Rental</a>
+        <a id="link_sale" class="btn btn-outline-secondary" href="/?type=Sale">Sale</a>
+    </div>
+    <button id="btn_parse" type="button" class="btn btn-sm btn-primary ms-auto">Run parser</button>
+</nav>
+
+<main class="container-fluid py-2 px-2">
+    <table id="table_id" class="table table-sm table-hover align-middle w-100" style="display:none">
+        <thead class="table-light">
+        <tr>
+            <th>City</th>
+            <th>Area</th>
+            <th>Type</th>
+            <th>Bedrooms</th>
+            <th>Size</th>
+            <th>Price</th>
+            <th>Last modified</th>
+            <th>Source</th>
+            <th>Link</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s: ${ads}">
+            <td th:text="${s.city}"/>
+            <td th:text="${s.city}  + ${s.location == null ? '' : '/' + s.location}"/>
+            <td th:text="${s.type.desc}"/>
+            <td th:text="${s.bedrooms}"/>
+            <td th:text="${s.size}"/>
+            <td th:text="${s.price}"/>
+            <td th:text="${#strings.replace(s.lastModified, 'T00:00', '')}"/>
+            <td th:text="${s.sourceCode}"/>
+            <td><a th:href="${s.sourceLink}" th:text="${s.sourceId}" target="_blank" rel="noopener"></a></td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="parse_toast" class="toast" role="alert">
+        <div class="d-flex">
+            <div id="parse_toast_body" class="toast-body"></div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/searchpanes/2.2.0/js/dataTables.searchPanes.min.js"></script>
+<script src="https://cdn.datatables.net/searchpanes/2.2.0/js/searchPanes.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+<script src="https://cdn.datatables.net/select/1.7.0/js/select.bootstrap5.min.js"></script>
+
+<script th:inline="none">
+    $(function () {
+        const isSale = location.search.includes('type=Sale');
+        const mult = isSale ? 100 : 1;
+        $('#link_rental, #link_sale').removeClass('active');
+        $(isSale ? '#link_sale' : '#link_rental').addClass('active');
+
+        const rangeOpts = (col, vals) =>
+            vals.map(p => ({ label: '≤ ' + p, value: r => !r[col] || parseFloat(r[col]) <= p }))
+                .concat(vals.map(p => ({ label: '≥ ' + p, value: r => !r[col] || parseFloat(r[col]) >= p })));
 
         $('#table_id').DataTable({
-            "paging": true,
-            "lengthMenu": [100, 500, 1000],
-            "order": [ [ 6, 'desc' ] ],
+            paging: true,
+            pageLength: 50,
+            lengthMenu: [50, 100, 500, 1000],
+            order: [[6, 'desc']],
+            deferRender: true,
+            orderClasses: false,
             searchPanes: {
-                cascadePanes: true,
-                viewTotal: true,
+                cascadePanes: false,
+                viewTotal: false,
+                clear: false,
+                collapse: false,
                 columns: [0, 1, 2, 3],
                 panes: [
-                    {
-                        header: 'Living area range',
-                        options: [40, 60, 80, 100, 120, 140].map(p => ({
-                            label: '<= ' + p,
-                            value: function (rowData, rowIdx) {
-                                return !rowData[4] || parseFloat(rowData[4]) <= p;
-                            }
-                        })).concat(
-                            [40, 60, 80, 100, 120, 140].map(p => ({
-                                label: '>= ' + p,
-                                value: function (rowData, rowIdx) {
-                                    return !rowData[4] || parseFloat(rowData[4]) >= p;
-                                }
-                            }))
-                        )
-                    },
-                    {
-                        header: 'Price range',
-                        options: [200, 300, 400, 500, 600, 700, 800, 1000, 1200, 1500]
-                            .map(p => p * priceFilterMultiplier)
-                            .map(p => ({
-                                label: '<= ' + p,
-                                value: function (rowData, rowIdx) {
-                                    return !rowData[5] || parseFloat(rowData[5]) <= p;
-                                }
-                            })).concat(
-                                [200, 300, 400, 500, 600]
-                                    .map(p => p * priceFilterMultiplier)
-                                    .map(p => ({
-                                        label: '>= ' + p,
-                                        value: function (rowData, rowIdx) {
-                                            return !rowData[5] || parseFloat(rowData[5]) >= p;
-                                        }
-                                    }))
-                            )
-                    }
+                    { header: 'Living area', options: rangeOpts(4, [40, 60, 80, 100, 120, 140]) },
+                    { header: 'Price', options: rangeOpts(5, [200, 300, 400, 500, 600, 700, 800, 1000, 1200, 1500].map(p => p * mult)) }
                 ]
             },
-            dom: 'Plfrtip',
-            fnDrawCallback: function () {
-                $("#loading_id").hide();
-                $("#table_id").show();
-            }
+            dom: "<'row mb-2'<'col-12'P>>" +
+                 "<'row mb-2'<'col-sm-6'l><'col-sm-6'f>>" +
+                 "<'row'<'col-12'tr>>" +
+                 "<'row mt-2'<'col-sm-5'i><'col-sm-7'p>>",
+            initComplete: function () { $('#table_id').show(); $('.dtsp-titleRow').remove(); $('#loader').remove(); }
+        });
+
+        const toastEl = document.getElementById('parse_toast');
+        const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+        const showToast = (msg, cls) => {
+            $('#parse_toast_body').text(msg);
+            toastEl.className = 'toast ' + cls;
+            toast.show();
+        };
+
+        $('#btn_parse').on('click', function () {
+            const btn = $(this).prop('disabled', true);
+            fetch('/parse', { method: 'POST' })
+                .then(r => r.text())
+                .then(msg => showToast(msg, 'text-bg-dark'))
+                .finally(() => setTimeout(() => btn.prop('disabled', false), 2000));
         });
     });
 </script>
