@@ -83,8 +83,9 @@ public class RealiticaContentLoader implements IContentLoader {
             }
             String current = text.split(" \\(")[0].trim().replace(" ", "+");
 
-            if (city == null && !cities.isEmpty()
-                    && cities.stream().noneMatch(c -> c.trim().replace(" ", "+").equalsIgnoreCase(current))) {
+            if (city == null && !cities.isEmpty() && cities.stream()
+                    .map(c -> c.trim().replace(" ", "+").toLowerCase())
+                    .noneMatch(current.toLowerCase()::startsWith)) {
                 log.info("Skip city {} by filter", current);
                 continue;
             }
