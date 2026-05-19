@@ -23,39 +23,39 @@ jobs:
           username: ${{ secrets.DOCKER_PUBLISH_REGISTRY_USERNAME }}
           password: ${{ secrets.DOCKER_PUBLISH_REGISTRY_PASSWORD }}
 
-  deploy:
-    needs: publish
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Copy docker-compose.yml
-        uses: appleboy/scp-action@master
-        with:
-          host: 31.186.136.15
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY_PERSONAL }}
-          source: docker-compose.yml
-          target: ~/estate/
-
-      - name: Start using docker-compose
-        uses: appleboy/ssh-action@master
-        with:
-          host: 31.186.136.15
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY_PERSONAL }}
-          script: |
-            cd estate
-            export POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            export TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-            export SMTP_HOST=${{ secrets.SMTP_HOST }}
-            export SMTP_PORT=${{ secrets.SMTP_PORT }}
-            export SMTP_LOGIN=${{ secrets.SMTP_LOGIN }}
-            export SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d
+#  deploy-brn:
+#    needs: publish
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Copy docker-compose.yml
+#        uses: appleboy/scp-action@master
+#        with:
+#          host: 31.186.136.15
+#          username: root
+#          key: ${{ secrets.SSH_PRIVATE_KEY_PERSONAL }}
+#          source: docker-compose.yml
+#          target: ~/estate/
+#
+#      - name: Start using docker-compose
+#        uses: appleboy/ssh-action@master
+#        with:
+#          host: 31.186.136.15
+#          username: root
+#          key: ${{ secrets.SSH_PRIVATE_KEY_PERSONAL }}
+#          script: |
+#            cd estate
+#            export POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+#            export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+#            export TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+#            export SMTP_HOST=${{ secrets.SMTP_HOST }}
+#            export SMTP_PORT=${{ secrets.SMTP_PORT }}
+#            export SMTP_LOGIN=${{ secrets.SMTP_LOGIN }}
+#            export SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
+#            docker-compose down
+#            docker-compose pull
+#            docker-compose up -d
 
   deploy-mne:
     needs: publish
