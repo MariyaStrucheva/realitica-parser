@@ -28,8 +28,11 @@ public class RealiticaContentLoader implements IContentLoader {
 
     private final AdRepository adRepository;
 
-    @Value("${realitica.url:https://www.realitica.com}")
+    @Value("${realitica.url}")
     private String baseUrl;
+
+    @Value("${realitica.cities:}")
+    private List<String> cities;
 
     @Override
     public List<String> loadAndSave() {
@@ -74,12 +77,17 @@ public class RealiticaContentLoader implements IContentLoader {
 //            searches.put("All-Sale", "https://www.realitica.com/index.php?for=Prodaja&lng=en&opa=" + city);
         }
         for (var element : areasElements) {
-            String current = element.text();
-            if (StringUtils.isEmpty(current)) {
+            String text = element.text();
+            if (StringUtils.isEmpty(text)) {
                 continue;
             }
+            String current = text.split(" \\(")[0].trim().replace(" ", "+");
 
-            current = current.split(" \\(")[0].trim().replace(" ", "+");
+            if (city == null && !cities.isEmpty()
+                    && cities.stream().noneMatch(c -> c.trim().replace(" ", "+").equalsIgnoreCase(current))) {
+                log.info("Skip city {} by filter", current);
+                continue;
+            }
 
             var linkToChild = element.child(0).attr("href");
             if (element.child(0).childNodeSize() > 1 || current.equals("Budva")) {
