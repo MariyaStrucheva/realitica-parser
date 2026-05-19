@@ -127,8 +127,10 @@
         };
 
         $('#btn_parse').on('click', function () {
+            const password = prompt('Password');
+            if (!password) return;
             const btn = $(this).prop('disabled', true);
-            fetch('/parse', { method: 'POST' })
+            fetch('/parse', { method: 'POST', headers: { 'X-Password': password } })
                 .then(r => r.text())
                 .then(msg => showToast(msg, 'text-bg-dark'))
                 .finally(() => setTimeout(() => btn.prop('disabled', false), 2000));
