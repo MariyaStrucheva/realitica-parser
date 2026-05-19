@@ -1,7 +1,6 @@
 package com.estate.parser.service.loader;
 
 import com.estate.parser.repository.AdRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,18 +18,31 @@ import java.util.stream.Collectors;
 public class LoaderService {
     private final List<IContentLoader> contentLoaders;
     private final AdRepository adRepository;
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     @Scheduled(cron = "0 0 19 * * *") // every day at 19:00
-    private void load() {
-        contentLoaders.parallelStream().forEach(loader -> {
-            try {
-                log.info("Start loading from {}", loader.getSourceName());
-                var ids = loader.loadAndSave();
-                log.info("Finish loading from {}, count {}", loader.getSourceName(), ids.size());
-            } catch (Exception e) {
-                log.error("Error loading from {}", loader.getSourceName(), e);
-            }
-        });
+    public void load() {
+        if (!running.compareAndSet(false, true)) {
+            log.warn("Loader is already running, skip");
+            return;
+        }
+        try {
+            contentLoaders.parallelStream().forEach(loader -> {
+                try {
+                    log.info("Start loading from {}", loader.getSourceName());
+                    var ids = loader.loadAndSave();
+                    log.info("Finish loading from {}, count {}", loader.getSourceName(), ids.size());
+                } catch (Exception e) {
+                    log.error("Error loading from {}", loader.getSourceName(), e);
+                }
+            });
+        } finally {
+            running.set(false);
+        }
+    }
+
+    public boolean isRunning() {
+        return running.get();
     }
 
     @Scheduled(cron = "0 0 18 * * SUN") // every Sunday at 18:00
